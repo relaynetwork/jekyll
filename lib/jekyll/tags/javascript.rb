@@ -1,3 +1,4 @@
+
 module Jekyll
 
   class Javascript < Liquid::Tag
@@ -58,7 +59,8 @@ module Jekyll
           mtime = File.mtime(mfile).to_i
         end
 
-        result << %Q{<script src="#{file}?#{mtime}" type="text/javascript" ></script>}
+        host = self.get_host_for_environment context
+        result << %Q{<script src="#{host}#{file}?#{mtime}" type="text/javascript" ></script>}
       end
 
       result.join("")

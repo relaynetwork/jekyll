@@ -81,7 +81,8 @@ module Jekyll
         mtime = File.mtime(file).to_i
       end
 
-      return %Q{<link rel="stylesheet" href="#{@file}?#{mtime}" type="text/css" media="screen, projection" />}
+      host = self.get_host_for_environment context
+      return %Q{<link rel="stylesheet" href="#{host}#{@file}?#{mtime}" type="text/css" media="screen, projection" />}
     end
   end
 
