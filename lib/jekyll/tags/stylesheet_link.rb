@@ -82,7 +82,7 @@ module Jekyll
       end
 
       host = self.get_host_for_environment context
-      return %Q{<link rel="stylesheet" href="#{host}#{@file}?#{mtime}" type="text/css" media="screen, projection" />\n}
+      return %Q{<link rel="stylesheet" href="#{host}#{@file}?#{mtime}" type="text/css" media="screen, projection" />}
     end
   end
 
