@@ -60,7 +60,7 @@ module Jekyll
         end
 
         host = self.get_host_for_environment context
-        result << %Q{<script src="#{host}#{file}?#{mtime}" type="text/javascript" ></script>}
+        result << %Q{<script src="#{host}#{file}?#{mtime}" type="text/javascript" ></script>\n}
       end
 
       result.join("")
