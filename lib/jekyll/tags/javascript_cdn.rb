@@ -1,7 +1,7 @@
 
 module Jekyll
 
-  class Javascript < Liquid::Tag
+  class JavascriptCdn < Liquid::Tag
     def initialize(tag_name, file, tokens)
       super
       @file = file
@@ -42,7 +42,7 @@ module Jekyll
     end
 
     def render(context, *stuff)
-      files = context.environments.first['page']['js_includes']
+      files = context.environments.first['page']['js_includes_cdn']
       if !@file.nil? && !@file.empty?
         files = [@file]
       end
@@ -59,7 +59,8 @@ module Jekyll
           mtime = File.mtime(mfile).to_i
         end
 
-        result << %Q{<script src="#{file}?#{mtime}" type="text/javascript" ></script>\n}
+        host = self.get_host_for_environment context
+        result << %Q{<script src="#{host}#{file}?#{mtime}" type="text/javascript" ></script>\n}
       end
 
       result.join("")
@@ -68,5 +69,5 @@ module Jekyll
 
 end
 
-Liquid::Template.register_tag('javascript', Jekyll::Javascript)
+Liquid::Template.register_tag('javascript_cdn', Jekyll::JavascriptCdn)
 
