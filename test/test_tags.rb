@@ -4,9 +4,9 @@ require 'helper'
 
 class TestTags < Test::Unit::TestCase
 
-  def create_post(content, override = {}, converter_class = Jekyll::MarkdownConverter)
+  def create_post(content, override = {}, converter_class = Jekyll::Converters::Markdown)
     stub(Jekyll).configuration do
-      Jekyll::DEFAULTS.deep_merge({'pygments' => true}).deep_merge(override)
+      Jekyll::Configuration::DEFAULTS.deep_merge({'pygments' => true}).deep_merge(override)
     end
     site = Site.new(Jekyll.configuration)
 
@@ -32,13 +32,14 @@ title: This is a test
 This document results in a markdown error with maruku
 
 {% highlight text %}#{code}{% endhighlight %}
+{% highlight text linenos %}#{code}{% endhighlight %}
 CONTENT
     create_post(content, override)
   end
 
   context "language name" do
     should "match only the required set of chars" do
-      r = Jekyll::HighlightBlock::SYNTAX
+      r = Jekyll::Tags::HighlightBlock::SYNTAX
       assert_match r, "ruby"
       assert_match r, "c#"
       assert_match r, "xml+cheetah"
@@ -54,20 +55,20 @@ CONTENT
 
   context "initialized tag" do
     should "work" do
-      tag = Jekyll::HighlightBlock.new('highlight', 'ruby ', ["test", "{% endhighlight %}", "\n"])
+      tag = Jekyll::Tags::HighlightBlock.new('highlight', 'ruby ', ["test", "{% endhighlight %}", "\n"])
       assert_equal({}, tag.instance_variable_get(:@options))
 
-      tag = Jekyll::HighlightBlock.new('highlight', 'ruby linenos ', ["test", "{% endhighlight %}", "\n"])
-      assert_equal({'O' => "linenos=inline"}, tag.instance_variable_get(:@options))
+      tag = Jekyll::Tags::HighlightBlock.new('highlight', 'ruby linenos ', ["test", "{% endhighlight %}", "\n"])
+      assert_equal({ 'linenos' => 'inline' }, tag.instance_variable_get(:@options))
 
-      tag = Jekyll::HighlightBlock.new('highlight', 'ruby linenos=table ', ["test", "{% endhighlight %}", "\n"])
-      assert_equal({'O' => "linenos=table"}, tag.instance_variable_get(:@options))
+      tag = Jekyll::Tags::HighlightBlock.new('highlight', 'ruby linenos=table ', ["test", "{% endhighlight %}", "\n"])
+      assert_equal({ 'linenos' => 'table' }, tag.instance_variable_get(:@options))
 
-      tag = Jekyll::HighlightBlock.new('highlight', 'ruby linenos=table nowrap', ["test", "{% endhighlight %}", "\n"])
-      assert_equal({'O' => "linenos=table,nowrap=true"}, tag.instance_variable_get(:@options))
+      tag = Jekyll::Tags::HighlightBlock.new('highlight', 'ruby linenos=table nowrap', ["test", "{% endhighlight %}", "\n"])
+      assert_equal({ 'linenos' => 'table', 'nowrap' => true }, tag.instance_variable_get(:@options))
 
-      tag = Jekyll::HighlightBlock.new('highlight', 'ruby linenos=table cssclass=hl', ["test", "{% endhighlight %}", "\n"])
-      assert_equal({'O' => "cssclass=hl,linenos=table"}, tag.instance_variable_get(:@options))
+      tag = Jekyll::Tags::HighlightBlock.new('highlight', 'ruby linenos=table cssclass=hl', ["test", "{% endhighlight %}", "\n"])
+      assert_equal({ 'cssclass' => 'hl', 'linenos' => 'table' }, tag.instance_variable_get(:@options))
     end
   end
 
@@ -80,8 +81,12 @@ CONTENT
       assert_no_match /markdown\-html\-error/, @result
     end
 
-    should "render markdown with pygments line handling" do
+    should "render markdown with pygments" do
       assert_match %{<pre><code class='text'>test\n</code></pre>}, @result
+    end
+
+    should "render markdown with pygments with line numbers" do
+      assert_match %{<pre><code class='text'><span class='lineno'>1</span> test\n</code></pre>}, @result
     end
   end
 
@@ -124,7 +129,7 @@ CONTENT
 
     context "using Textile" do
       setup do
-        create_post(@content, {}, Jekyll::TextileConverter)
+        create_post(@content, {}, Jekyll::Converters::Textile)
       end
 
       # Broken in RedCloth 4.1.9
@@ -165,7 +170,7 @@ CONTENT
         assert_match %r{<em>FINISH HIM</em>}, @result
       end
     end
-    
+
     context "using Redcarpet" do
       setup do
         create_post(@content, 'markdown' => 'redcarpet')
@@ -199,44 +204,107 @@ CONTENT
     end
   end
 
-  context "test stylesheet_link" do
+  context "simple page with nested post linking" do
     setup do
-      content = <<-CONTENT
+      content = <<CONTENT
 ---
-title: test stylesheet link
+title: Post linking
 ---
 
-{% stylesheet "/path/to/some/css.file" %}
-
-      CONTENT
-      create_post(content, {}, Jekyll::TextileConverter)
+- 1 {% post_url 2008-11-21-complex %}
+- 2 {% post_url /2008-11-21-complex %}
+- 3 {% post_url es/2008-11-21-nested %}
+- 4 {% post_url /es/2008-11-21-nested %}
+CONTENT
+      create_post(content, {'permalink' => 'pretty', 'source' => source_dir, 'destination' => dest_dir, 'read_posts' => true})
     end
 
-    should "have stylesheet link with time based querystring" do
-      assert_match %r{stylesheet}, @result
-      assert_match %r{href=}, @result
-      assert_match %r{\?\d+}, @result
+    should "not cause an error" do
+      assert_no_match /markdown\-html\-error/, @result
+    end
+
+    should "have the url to the \"nested\" post from 2008-11-21" do
+      assert_match %r{1\s/2008/11/21/complex/}, @result
+      assert_match %r{2\s/2008/11/21/complex/}, @result
+    end
+
+    should "have the url to the \"nested\" post from 2008-11-21" do
+      assert_match %r{3\s/2008/11/21/nested/}, @result
+      assert_match %r{4\s/2008/11/21/nested/}, @result
     end
   end
 
-  context "test javascript" do
-    setup do
-      content = <<-CONTENT
+  context "gist tag" do
+    context "simple" do
+      setup do
+        @gist = 358471
+        content = <<CONTENT
 ---
-title: test javascript link
+title: My Cool Gist
 ---
 
-{% javascript "/path/to/some/file.js" %}
+{% gist #{@gist} %}
+CONTENT
+        create_post(content, {'permalink' => 'pretty', 'source' => source_dir, 'destination' => dest_dir, 'read_posts' => true})
+      end
 
-      CONTENT
-      create_post(content, {}, Jekyll::TextileConverter)
+      should "write script tag" do
+        assert_match "<script src='https://gist.github.com/#{@gist}.js'>\s</script>", @result
+      end
     end
 
-    should "have javascript link with time based querystring" do
-      assert_match %r{script}, @result
-      assert_match %r{src=}, @result
-      assert_match %r{\?\d+}, @result
-      puts @result
+    context "with specific file" do
+      setup do
+        @gist = 358471
+        @filename = 'somefile.rb'
+        content = <<CONTENT
+---
+title: My Cool Gist
+---
+
+{% gist #{@gist} #{@filename} %}
+CONTENT
+        create_post(content, {'permalink' => 'pretty', 'source' => source_dir, 'destination' => dest_dir, 'read_posts' => true})
+      end
+
+      should "write script tag with specific file in gist" do
+        assert_match "<script src='https://gist.github.com/#{@gist}.js?file=#{@filename}'>\s</script>", @result
+      end
+    end
+
+    context "with blank gist id" do
+      setup do
+        content = <<CONTENT
+---
+title: My Cool Gist
+---
+
+{% gist %}
+CONTENT
+        create_post(content, {'permalink' => 'pretty', 'source' => source_dir, 'destination' => dest_dir, 'read_posts' => true})
+      end
+
+      should "output error message" do
+        assert_match "Error parsing gist id", @result
+      end
+    end
+
+    context "with invalid gist id" do
+      setup do
+        invalid_gist = 'invalid'
+        content = <<CONTENT
+---
+title: My Cool Gist
+---
+
+{% gist #{invalid_gist} %}
+CONTENT
+        create_post(content, {'permalink' => 'pretty', 'source' => source_dir, 'destination' => dest_dir, 'read_posts' => true})
+      end
+
+      should "output error message" do
+        assert_match "Error parsing gist id", @result
+      end
     end
   end
 end

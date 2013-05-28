@@ -1,10 +1,12 @@
 module Jekyll
-
   class Layout
     include Convertible
 
     # Gets the Site object.
     attr_reader :site
+
+    # Gets the name of this layout.
+    attr_reader :name
 
     # Gets/Sets the extension of this layout.
     attr_accessor :ext
@@ -40,5 +42,4 @@ module Jekyll
       self.ext = File.extname(name)
     end
   end
-
 end
