@@ -1,7 +1,5 @@
 module Jekyll
 
-  $stderr.puts "IN RELAY STYLESHEET TAG"
-
   class StylesheetTag < Liquid::Tag
     #
     # CSS Stylesheet Liquid Tag for Jekyll.  This link tag will include the
