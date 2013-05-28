@@ -48,17 +48,25 @@ module Jekyll
 
       source_dir = context.registers[:site].source
       page_url = context.environments.first['page']['url']
+      scss_file = file.sub('.css', '.scss')
       files = [File.join(source_dir, file),
+               File.join(source_dir, scss_file),
                # try with stripping a leading slash
                File.join(source_dir, file[1..-1]),
+               File.join(source_dir, scss_file[1..-1]),
                # try relative to the current page
-               File.join(source_dir, File.dirname(page_url), file)]
+               File.join(source_dir, File.dirname(page_url), file),
+               File.join(source_dir, File.dirname(page_url), scss_file)]
 
       if context['site']['stylesheet_link']
         context['site']['stylesheet_link']['search_paths'].each do |path|
           files << File.join(path, file)
           files << File.join(path, file[1..-1])
           files << File.join(path, File.dirname(page_url), file)
+
+          files << File.join(path, scss_file)
+          files << File.join(path, scss_file[1..-1])
+          files << File.join(path, File.dirname(page_url), scss_file)
         end
       end
 

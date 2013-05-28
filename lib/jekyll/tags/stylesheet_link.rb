@@ -1,5 +1,7 @@
 module Jekyll
 
+  $stderr.puts "IN RELAY STYLESHEET TAG"
+
   class StylesheetTag < Liquid::Tag
     #
     # CSS Stylesheet Liquid Tag for Jekyll.  This link tag will include the
@@ -49,7 +51,7 @@ module Jekyll
       source_dir = context.registers[:site].source
       page_url = context.environments.first['page']['url']
       # look for both .css and .scss (sass) files
-      scss_file = file.sub('.css$', '.scss')
+      scss_file = file.sub('.css', '.scss')
 
       files = [File.join(source_dir, file),
                File.join(source_dir, scss_file),
@@ -65,6 +67,10 @@ module Jekyll
           files << File.join(path, file)
           files << File.join(path, file[1..-1])
           files << File.join(path, File.dirname(page_url), file)
+
+          files << File.join(path, scss_file)
+          files << File.join(path, scss_file[1..-1])
+          files << File.join(path, File.dirname(page_url), scss_file)
         end
       end
 
@@ -73,6 +79,7 @@ module Jekyll
           return file
         end
       }
+
       return file
     end
 
